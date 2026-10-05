@@ -10,6 +10,18 @@
 :root{
   --bg:#0b1020;--panel:#131a30;--panel2:#182142;--line:#26315a;
   --text:#e8ecf8;--mute:#9aa6c8;--a:#7c9cff;--b:#5ee0c1;--c:#ffb86b;--d:#ff7a90;
+  --lead:#cdd5ee;--badbg:#1c1424;--badline:#5a2a3a;--goodbg:#0f2028;--goodline:#1f5a50;
+  --cloudbg:#141c3c;--cloudline:#3c4fa0;--codebg:#0a0f1e;--codefg:#bcd0ff;--chipfg:#cfd8f5;
+  --threatfg:#ffc2cc;--body2:#d5ddf5;--tagbad:#3a1826;--taggood:#123a34;--tagnext:#3a2c14;--onaccent:#08101f;
+  color-scheme:dark;
+}
+:root[data-theme=light]{
+  --bg:#f6f8fd;--panel:#ffffff;--panel2:#eef2fb;--line:#d5dcee;
+  --text:#131a30;--mute:#56617f;--a:#3b5bdb;--b:#0b8a70;--c:#b06200;--d:#c92a4b;
+  --lead:#2c3654;--badbg:#fff1f3;--badline:#f1c0ca;--goodbg:#ecfaf6;--goodline:#a9dfd2;
+  --cloudbg:#eef1ff;--cloudline:#b9c4f2;--codebg:#eef2fb;--codefg:#2a3f9e;--chipfg:#2c3654;
+  --threatfg:#a01f3b;--body2:#2c3654;--tagbad:#fde0e5;--taggood:#d3f3ea;--tagnext:#fdebcf;--onaccent:#ffffff;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -21,7 +33,7 @@ h1{font-size:clamp(2rem,8vw,3.2rem);line-height:1.1;margin:0 0 16px;letter-spaci
 h2{font-size:clamp(1.5rem,5.5vw,2rem);line-height:1.2;margin:0 0 10px;letter-spacing:-.01em}
 h3{font-size:1.05rem;margin:0 0 6px}
 p{margin:0 0 14px}
-.lead{font-size:1.1rem;color:#cdd5ee}
+.lead{font-size:1.1rem;color:var(--lead)}
 .mute{color:var(--mute)}
 .small{font-size:.86rem}
 .grad{background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -43,14 +55,14 @@ p{margin:0 0 14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
 .card p:last-child{margin-bottom:0}
 .card .ico{font-size:1.6rem;line-height:1;margin-bottom:8px}
-.card.bad{border-color:#5a2a3a;background:#1c1424}
-.card.good{border-color:#1f5a50;background:#0f2028}
+.card.bad{border-color:var(--badline);background:var(--badbg)}
+.card.good{border-color:var(--goodline);background:var(--goodbg)}
 .tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 9px;border-radius:99px;margin-bottom:10px}
-.tag.bad{background:#3a1826;color:var(--d)}
-.tag.good{background:#123a34;color:var(--b)}
-.tag.live{background:#123a34;color:var(--b)}
-.tag.next{background:#3a2c14;color:var(--c)}
+.tag.bad{background:var(--tagbad);color:var(--d)}
+.tag.good{background:var(--taggood);color:var(--b)}
+.tag.live{background:var(--taggood);color:var(--b)}
+.tag.next{background:var(--tagnext);color:var(--c)}
 ul.clean{list-style:none;padding:0;margin:0}
 ul.clean li{padding:6px 0 6px 26px;position:relative}
 ul.clean li::before{content:"✕";position:absolute;left:0;color:var(--d);font-weight:700}
@@ -60,7 +72,7 @@ ul.clean li::before{content:"✕";position:absolute;left:0;color:var(--d);font-w
 .flow{counter-reset:s;margin-top:18px}
 .step{position:relative;padding:0 0 22px 56px}
 .step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:38px;height:38px;border-radius:50%;
-  background:linear-gradient(135deg,var(--a),var(--b));color:#08101f;font-weight:800;display:grid;place-items:center}
+  background:linear-gradient(135deg,var(--a),var(--b));color:var(--onaccent);font-weight:800;display:grid;place-items:center}
 .step::after{content:"";position:absolute;left:18px;top:42px;bottom:2px;width:2px;background:var(--line)}
 .step:last-child::after{display:none}
 .step p{margin:0;color:var(--mute)}
@@ -72,7 +84,7 @@ ul.clean li::before{content:"✕";position:absolute;left:0;color:var(--d);font-w
 .cmp .q{grid-column:1/-1;background:var(--panel2);padding:9px 14px;font-weight:700;font-size:.9rem}
 .cmp .x,.cmp .y{padding:11px 14px;font-size:.92rem}
 .cmp .x{color:var(--mute);border-right:1px solid var(--line)}
-.cmp .y{background:#0f2028}
+.cmp .y{background:var(--goodbg)}
 .cmp .head .x,.cmp .head .y{font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}
 .cmp .head .y{color:var(--b)}
 
@@ -86,30 +98,45 @@ ul.clean li::before{content:"✕";position:absolute;left:0;color:var(--d);font-w
 .layer h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .layer p{margin:0;color:var(--mute);font-size:.93rem}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.chip{font-size:.76rem;font-weight:600;padding:4px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:#cfd8f5}
+.chip{font-size:.76rem;font-weight:600;padding:4px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--chipfg)}
 .conn{display:flex;align-items:center;gap:10px;padding:8px 0 8px 22px;color:var(--mute);font-size:.82rem}
 .conn i{width:2px;height:30px;background:linear-gradient(var(--a),var(--b));display:block;flex:none}
 .wall{border:2px dashed var(--c);border-radius:20px;padding:14px;background:rgba(255,184,107,.05)}
 .wall>.lbl{color:var(--c);font-weight:800;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
 .split{display:grid;gap:10px}
 @media(min-width:600px){.split{grid-template-columns:1fr 1fr}}
-.l-cloud{border-color:#3c4fa0;background:#141c3c}
-.l-pi{border-color:#1f5a50;background:#0f2028}
-code{font:600 .86em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0a0f1e;border:1px solid var(--line);
-  padding:1px 6px;border-radius:6px;color:#bcd0ff;word-break:break-all}
+.l-cloud{border-color:var(--cloudline);background:var(--cloudbg)}
+.l-pi{border-color:var(--goodline);background:var(--goodbg)}
+code{font:600 .86em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--codebg);border:1px solid var(--line);
+  padding:1px 6px;border-radius:6px;color:var(--codefg);word-break:break-all}
 
 /* threat list */
 .threat{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px;background:var(--panel)}
-.threat .t{padding:10px 14px;background:#1c1424;color:#ffc2cc;font-weight:700;font-size:.92rem}
-.threat .f{padding:10px 14px;font-size:.92rem;color:#d5ddf5}
+.threat .t{padding:10px 14px;background:var(--badbg);color:var(--threatfg);font-weight:700;font-size:.92rem}
+.threat .f{padding:10px 14px;font-size:.92rem;color:var(--body2)}
 .threat .f b{color:var(--b)}
 .note{border-left:3px solid var(--c);background:rgba(255,184,107,.07);padding:12px 14px;border-radius:0 12px 12px 0;margin-top:18px;font-size:.93rem}
 footer{padding:30px 0 50px;border-top:1px solid var(--line);color:var(--mute);font-size:.84rem}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
 nav a{color:var(--text);text-decoration:none;font-size:.86rem;font-weight:600;padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
+.tgl{position:fixed;top:12px;right:12px;z-index:10;width:44px;height:44px;border-radius:50%;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:1.2rem;line-height:1;
+  box-shadow:0 4px 14px rgba(0,0,0,.25)}
+body,.card,.layer,.stat,.dia,.threat,.cmp{transition:background-color .2s,border-color .2s,color .2s}
 </style>
 </head>
 <body>
+<button class="tgl" id="tgl" type="button" aria-label="Switch between light and dark theme">🌙</button>
+<script>
+(function(){
+  var r=document.documentElement,b=document.getElementById('tgl'),t;
+  try{t=localStorage.getItem('theme')}catch(e){}
+  if(!t)t=window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+  function set(v){r.setAttribute('data-theme',v);b.textContent=v==='light'?'🌙':'☀️'}
+  set(t);
+  b.onclick=function(){t=t==='light'?'dark':'light';set(t);try{localStorage.setItem('theme',t)}catch(e){}};
+})();
+</script>
 
 <header class="hero">
   <div class="wrap">
@@ -180,31 +207,31 @@ nav a{color:var(--text);text-decoration:none;font-size:.86rem;font-weight:600;pa
   <div class="dia">
     <svg viewBox="0 0 360 340" role="img" aria-label="A central shared memory connected to a MacBook, a desktop, a phone and an always-on Pi cluster">
       <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c9cff"/><stop offset="1" stop-color="#5ee0c1"/></linearGradient>
-        <radialGradient id="glow"><stop offset="0" stop-color="#7c9cff" stop-opacity=".45"/><stop offset="1" stop-color="#7c9cff" stop-opacity="0"/></radialGradient>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a)"/><stop offset="1" style="stop-color:var(--b)"/></linearGradient>
+        <radialGradient id="glow"><stop offset="0" style="stop-color:var(--a)" stop-opacity=".45"/><stop offset="1" style="stop-color:var(--a)" stop-opacity="0"/></radialGradient>
       </defs>
       <circle cx="180" cy="170" r="120" fill="url(#glow)"/>
       <g stroke="url(#g)" stroke-width="2.5" stroke-dasharray="5 5" fill="none">
         <path d="M82 70 L150 135"/><path d="M278 70 L210 135"/>
         <path d="M82 270 L150 205"/><path d="M278 270 L210 205"/>
       </g>
-      <circle cx="180" cy="170" r="58" fill="#0b1020" stroke="url(#g)" stroke-width="3"/>
-      <text x="180" y="160" text-anchor="middle" fill="#e8ecf8" font-size="15" font-weight="800" font-family="system-ui,sans-serif">Shared</text>
-      <text x="180" y="179" text-anchor="middle" fill="#e8ecf8" font-size="15" font-weight="800" font-family="system-ui,sans-serif">memory</text>
-      <text x="180" y="197" text-anchor="middle" fill="#9aa6c8" font-size="10.5" font-family="system-ui,sans-serif">text files in git</text>
+      <circle cx="180" cy="170" r="58" style="fill:var(--bg)" stroke="url(#g)" stroke-width="3"/>
+      <text x="180" y="160" text-anchor="middle" style="fill:var(--text)" font-size="15" font-weight="800" font-family="system-ui,sans-serif">Shared</text>
+      <text x="180" y="179" text-anchor="middle" style="fill:var(--text)" font-size="15" font-weight="800" font-family="system-ui,sans-serif">memory</text>
+      <text x="180" y="197" text-anchor="middle" style="fill:var(--mute)" font-size="10.5" font-family="system-ui,sans-serif">text files in git</text>
       <g font-family="system-ui,sans-serif" text-anchor="middle">
-        <g><rect x="12" y="20" width="140" height="56" rx="12" fill="#182142" stroke="#26315a"/>
-          <text x="82" y="44" fill="#e8ecf8" font-size="13.5" font-weight="700">💻 MacBook</text>
-          <text x="82" y="62" fill="#9aa6c8" font-size="10.5">build + browser agent</text></g>
-        <g><rect x="208" y="20" width="140" height="56" rx="12" fill="#182142" stroke="#26315a"/>
-          <text x="278" y="44" fill="#e8ecf8" font-size="13.5" font-weight="700">🖥️ Desktop</text>
-          <text x="278" y="62" fill="#9aa6c8" font-size="10.5">heavy data work</text></g>
-        <g><rect x="12" y="264" width="140" height="56" rx="12" fill="#182142" stroke="#26315a"/>
-          <text x="82" y="288" fill="#e8ecf8" font-size="13.5" font-weight="700">📱 Phone</text>
-          <text x="82" y="306" fill="#9aa6c8" font-size="10.5">ask from anywhere</text></g>
-        <g><rect x="208" y="264" width="140" height="56" rx="12" fill="#0f2028" stroke="#5ee0c1" stroke-width="2"/>
-          <text x="278" y="288" fill="#5ee0c1" font-size="13.5" font-weight="800">🍓 Pi cluster</text>
-          <text x="278" y="306" fill="#9aa6c8" font-size="10.5">always on · 24/7</text></g>
+        <g><rect x="12" y="20" width="140" height="56" rx="12" style="fill:var(--panel2)" stroke="currentColor" stroke-opacity=".25"/>
+          <text x="82" y="44" style="fill:var(--text)" font-size="13.5" font-weight="700">💻 MacBook</text>
+          <text x="82" y="62" style="fill:var(--mute)" font-size="10.5">build + browser agent</text></g>
+        <g><rect x="208" y="20" width="140" height="56" rx="12" style="fill:var(--panel2)" stroke="currentColor" stroke-opacity=".25"/>
+          <text x="278" y="44" style="fill:var(--text)" font-size="13.5" font-weight="700">🖥️ Desktop</text>
+          <text x="278" y="62" style="fill:var(--mute)" font-size="10.5">heavy data work</text></g>
+        <g><rect x="12" y="264" width="140" height="56" rx="12" style="fill:var(--panel2)" stroke="currentColor" stroke-opacity=".25"/>
+          <text x="82" y="288" style="fill:var(--text)" font-size="13.5" font-weight="700">📱 Phone</text>
+          <text x="82" y="306" style="fill:var(--mute)" font-size="10.5">ask from anywhere</text></g>
+        <g><rect x="208" y="264" width="140" height="56" rx="12" style="fill:var(--goodbg)" stroke="url(#g)" stroke-width="2"/>
+          <text x="278" y="288" style="fill:var(--b)" font-size="13.5" font-weight="800">🍓 Pi cluster</text>
+          <text x="278" y="306" style="fill:var(--mute)" font-size="10.5">always on · 24/7</text></g>
       </g>
     </svg>
   </div>
