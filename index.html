@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>An AI assistant that remembers, and never sleeps</title>
+<meta name="description" content="How Emilio's always-on AI setup works: shared memory, a home Pi cluster, and a zero-open-ports security design.">
+<style>
+:root{
+  --bg:#0b1020;--panel:#131a30;--panel2:#182142;--line:#26315a;
+  --text:#e8ecf8;--mute:#9aa6c8;--a:#7c9cff;--b:#5ee0c1;--c:#ffb86b;--d:#ff7a90;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+section{padding:44px 0;border-top:1px solid var(--line)}
+h1{font-size:clamp(2rem,8vw,3.2rem);line-height:1.1;margin:0 0 16px;letter-spacing:-.02em}
+h2{font-size:clamp(1.5rem,5.5vw,2rem);line-height:1.2;margin:0 0 10px;letter-spacing:-.01em}
+h3{font-size:1.05rem;margin:0 0 6px}
+p{margin:0 0 14px}
+.lead{font-size:1.1rem;color:#cdd5ee}
+.mute{color:var(--mute)}
+.small{font-size:.86rem}
+.grad{background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--b);font-weight:700;margin-bottom:10px}
+
+/* hero */
+.hero{padding:56px 0 40px;background:
+  radial-gradient(600px 300px at 85% -10%,rgba(124,156,255,.28),transparent 70%),
+  radial-gradient(500px 280px at 0% 10%,rgba(94,224,193,.16),transparent 70%)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:26px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stat b{display:block;font-size:1.7rem;line-height:1.1}
+.stat span{font-size:.82rem;color:var(--mute)}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr)}}
+
+/* cards */
+.grid{display:grid;gap:12px;margin-top:18px}
+@media(min-width:600px){.grid.two{grid-template-columns:1fr 1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card p:last-child{margin-bottom:0}
+.card .ico{font-size:1.6rem;line-height:1;margin-bottom:8px}
+.card.bad{border-color:#5a2a3a;background:#1c1424}
+.card.good{border-color:#1f5a50;background:#0f2028}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 9px;border-radius:99px;margin-bottom:10px}
+.tag.bad{background:#3a1826;color:var(--d)}
+.tag.good{background:#123a34;color:var(--b)}
+.tag.live{background:#123a34;color:var(--b)}
+.tag.next{background:#3a2c14;color:var(--c)}
+ul.clean{list-style:none;padding:0;margin:0}
+ul.clean li{padding:6px 0 6px 26px;position:relative}
+ul.clean li::before{content:"✕";position:absolute;left:0;color:var(--d);font-weight:700}
+.good ul.clean li::before,ul.clean.ok li::before{content:"✓";color:var(--b)}
+
+/* flow */
+.flow{counter-reset:s;margin-top:18px}
+.step{position:relative;padding:0 0 22px 56px}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,var(--a),var(--b));color:#08101f;font-weight:800;display:grid;place-items:center}
+.step::after{content:"";position:absolute;left:18px;top:42px;bottom:2px;width:2px;background:var(--line)}
+.step:last-child::after{display:none}
+.step p{margin:0;color:var(--mute)}
+
+/* compare */
+.cmp{margin-top:18px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.cmp .row{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.cmp .row:first-child{border-top:0}
+.cmp .q{grid-column:1/-1;background:var(--panel2);padding:9px 14px;font-weight:700;font-size:.9rem}
+.cmp .x,.cmp .y{padding:11px 14px;font-size:.92rem}
+.cmp .x{color:var(--mute);border-right:1px solid var(--line)}
+.cmp .y{background:#0f2028}
+.cmp .head .x,.cmp .head .y{font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}
+.cmp .head .y{color:var(--b)}
+
+/* diagram */
+.dia{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px;margin-top:18px}
+.dia svg{display:block;width:100%;height:auto}
+
+/* security stack */
+.stack{margin-top:18px}
+.layer{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--panel)}
+.layer h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.layer p{margin:0;color:var(--mute);font-size:.93rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:.76rem;font-weight:600;padding:4px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:#cfd8f5}
+.conn{display:flex;align-items:center;gap:10px;padding:8px 0 8px 22px;color:var(--mute);font-size:.82rem}
+.conn i{width:2px;height:30px;background:linear-gradient(var(--a),var(--b));display:block;flex:none}
+.wall{border:2px dashed var(--c);border-radius:20px;padding:14px;background:rgba(255,184,107,.05)}
+.wall>.lbl{color:var(--c);font-weight:800;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.split{display:grid;gap:10px}
+@media(min-width:600px){.split{grid-template-columns:1fr 1fr}}
+.l-cloud{border-color:#3c4fa0;background:#141c3c}
+.l-pi{border-color:#1f5a50;background:#0f2028}
+code{font:600 .86em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0a0f1e;border:1px solid var(--line);
+  padding:1px 6px;border-radius:6px;color:#bcd0ff;word-break:break-all}
+
+/* threat list */
+.threat{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px;background:var(--panel)}
+.threat .t{padding:10px 14px;background:#1c1424;color:#ffc2cc;font-weight:700;font-size:.92rem}
+.threat .f{padding:10px 14px;font-size:.92rem;color:#d5ddf5}
+.threat .f b{color:var(--b)}
+.note{border-left:3px solid var(--c);background:rgba(255,184,107,.07);padding:12px 14px;border-radius:0 12px 12px 0;margin-top:18px;font-size:.93rem}
+footer{padding:30px 0 50px;border-top:1px solid var(--line);color:var(--mute);font-size:.84rem}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+nav a{color:var(--text);text-decoration:none;font-size:.86rem;font-weight:600;padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">For Lux · from Emilio</div>
+    <h1>An AI assistant that <span class="grad">remembers</span>, and <span class="grad">never sleeps</span>.</h1>
+    <p class="lead">Lux, this is the thing I keep talking about. Out of the box, an AI assistant is brilliant and forgetful: every chat starts from zero, on one device, and stops when the lid closes. I built the layer around it that fixes that. Here is what it is, why it matters, and how it stays safe.</p>
+    <div class="stats">
+      <div class="stat"><b class="grad">1</b><span>shared memory, every device</span></div>
+      <div class="stat"><b class="grad">8</b><span>Raspberry Pis, always on</span></div>
+      <div class="stat"><b class="grad">0</b><span>open ports on the home router</span></div>
+      <div class="stat"><b class="grad">24/7</b><span>reachable from a phone</span></div>
+    </div>
+    <nav>
+      <a href="#what">1 · What it is</a>
+      <a href="#security">2 · Approach &amp; security</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="what">
+  <div class="eyebrow">Part 1 · The problem</div>
+  <h2>A genius with no memory is an expensive intern.</h2>
+  <p class="mute">The "basic approach" is one chat window on one laptop. It works for a single question. It breaks the moment work spans days, projects or devices.</p>
+  <div class="grid two">
+    <div class="card bad">
+      <span class="tag bad">Basic approach</span>
+      <ul class="clean">
+        <li>Starts every session from zero</li>
+        <li>You re-explain context, again and again</li>
+        <li>Knowledge trapped in one device's chat history</li>
+        <li>Research gets redone because nobody can find it</li>
+        <li>Stops working when the laptop sleeps</li>
+        <li>"Done" means "the AI said so"</li>
+      </ul>
+    </div>
+    <div class="card good">
+      <span class="tag good">What I run</span>
+      <ul class="clean">
+        <li>Each session opens with a handover from the last</li>
+        <li>Decisions and open questions are tracked, by id</li>
+        <li>One memory, read by every device and agent</li>
+        <li>Research is written once, cited, and reused</li>
+        <li>An always-on cluster keeps it reachable</li>
+        <li>"Done" must ship the output that proves it</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">The system</div>
+  <h2>Four parts, one job each.</h2>
+  <div class="grid two">
+    <div class="card"><div class="ico">🧭</div><h3>The harness</h3><p class="mute">The rulebook and guardrails every assistant loads on start: how to answer, what it may touch, when to stop and ask. Kept in version control, so every machine behaves the same way.</p><p class="small"><b>Value:</b> consistent behaviour, not a new personality each morning.</p></div>
+    <div class="card"><div class="ico">📚</div><h3>The knowledge base</h3><p class="mute">A private wiki of what we have learned: full research reports with sources, plus short "rules of thumb" notes. An agent drafts; I approve before anything is published.</p><p class="small"><b>Value:</b> pay for a piece of research once.</p></div>
+    <div class="card"><div class="ico">🗂️</div><h3>Session management</h3><p class="mute">Every working session is logged and summarised automatically. It ends with a short handover: where we are, what was agreed, what is waiting on me.</p><p class="small"><b>Value:</b> pick up cold, in seconds, on any device.</p></div>
+    <div class="card"><div class="ico">📊</div><h3>The portfolio</h3><p class="mute">One registry of every project and its status, plus a single list of open questions, decisions, to-dos and ideas across all machines.</p><p class="small"><b>Value:</b> nothing lives only in my head, or only in a chat.</p></div>
+  </div>
+  <div class="note">The design rule underneath all four: <b>plain text files in version control are the source of truth.</b> No proprietary database, no vendor lock-in. If a tool disappears tomorrow, the memory is still readable by a human.</div>
+</section>
+
+<section>
+  <div class="eyebrow">The picture</div>
+  <h2>One memory. Many ways in.</h2>
+  <p class="mute">Each device holds a full, synced copy. The Pi cluster is the one that never switches off.</p>
+  <div class="dia">
+    <svg viewBox="0 0 360 340" role="img" aria-label="A central shared memory connected to a MacBook, a desktop, a phone and an always-on Pi cluster">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c9cff"/><stop offset="1" stop-color="#5ee0c1"/></linearGradient>
+        <radialGradient id="glow"><stop offset="0" stop-color="#7c9cff" stop-opacity=".45"/><stop offset="1" stop-color="#7c9cff" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle cx="180" cy="170" r="120" fill="url(#glow)"/>
+      <g stroke="url(#g)" stroke-width="2.5" stroke-dasharray="5 5" fill="none">
+        <path d="M82 70 L150 135"/><path d="M278 70 L210 135"/>
+        <path d="M82 270 L150 205"/><path d="M278 270 L210 205"/>
+      </g>
+      <circle cx="180" cy="170" r="58" fill="#0b1020" stroke="url(#g)" stroke-width="3"/>
+      <text x="180" y="160" text-anchor="middle" fill="#e8ecf8" font-size="15" font-weight="800" font-family="system-ui,sans-serif">Shared</text>
+      <text x="180" y="179" text-anchor="middle" fill="#e8ecf8" font-size="15" font-weight="800" font-family="system-ui,sans-serif">memory</text>
+      <text x="180" y="197" text-anchor="middle" fill="#9aa6c8" font-size="10.5" font-family="system-ui,sans-serif">text files in git</text>
+      <g font-family="system-ui,sans-serif" text-anchor="middle">
+        <g><rect x="12" y="20" width="140" height="56" rx="12" fill="#182142" stroke="#26315a"/>
+          <text x="82" y="44" fill="#e8ecf8" font-size="13.5" font-weight="700">💻 MacBook</text>
+          <text x="82" y="62" fill="#9aa6c8" font-size="10.5">build + browser agent</text></g>
+        <g><rect x="208" y="20" width="140" height="56" rx="12" fill="#182142" stroke="#26315a"/>
+          <text x="278" y="44" fill="#e8ecf8" font-size="13.5" font-weight="700">🖥️ Desktop</text>
+          <text x="278" y="62" fill="#9aa6c8" font-size="10.5">heavy data work</text></g>
+        <g><rect x="12" y="264" width="140" height="56" rx="12" fill="#182142" stroke="#26315a"/>
+          <text x="82" y="288" fill="#e8ecf8" font-size="13.5" font-weight="700">📱 Phone</text>
+          <text x="82" y="306" fill="#9aa6c8" font-size="10.5">ask from anywhere</text></g>
+        <g><rect x="208" y="264" width="140" height="56" rx="12" fill="#0f2028" stroke="#5ee0c1" stroke-width="2"/>
+          <text x="278" y="288" fill="#5ee0c1" font-size="13.5" font-weight="800">🍓 Pi cluster</text>
+          <text x="278" y="306" fill="#9aa6c8" font-size="10.5">always on · 24/7</text></g>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">A working day</div>
+  <h2>How a session actually runs.</h2>
+  <div class="flow">
+    <div class="step"><h3>It opens knowing where we left off</h3><p>The last handover and the open-items count are loaded automatically. No "as I was saying last week".</p></div>
+    <div class="step"><h3>We agree the objective</h3><p>A few turns in, the assistant proposes what "done" looks like. I confirm. That is the boundary; it does not wander.</p></div>
+    <div class="step"><h3>It checks what we already know</h3><p>Before researching anything, it searches the knowledge base. New findings are written up with sources.</p></div>
+    <div class="step"><h3>It delegates</h3><p>A coordinator hands narrow jobs to specialist agents (research, spec, review) and keeps the conclusions.</p></div>
+    <div class="step"><h3>Everything open gets an id</h3><p>Questions, decisions, to-dos and ideas go into one list, visible from every device.</p></div>
+    <div class="step"><h3>It writes the handover</h3><p>Short, structured, and synced. The next session, on any machine, starts from it.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Side by side</div>
+  <h2>Why this beats the basic setup.</h2>
+  <div class="cmp">
+    <div class="row head"><div class="x">Chat on a laptop</div><div class="y">This system</div></div>
+    <div class="row"><div class="q">Memory between sessions</div><div class="x">None, or an opaque vendor feature</div><div class="y">Explicit, readable, mine</div></div>
+    <div class="row"><div class="q">Across devices</div><div class="x">Each device is an island</div><div class="y">One synced memory everywhere</div></div>
+    <div class="row"><div class="q">Availability</div><div class="x">Only while the laptop is awake</div><div class="y">Always-on cluster, phone as remote</div></div>
+    <div class="row"><div class="q">Trust in "it's done"</div><div class="x">Take the AI's word</div><div class="y">Proof attached, or it says "skipped"</div></div>
+    <div class="row"><div class="q">Research</div><div class="x">Repeated, uncited, lost</div><div class="y">Cited once, reused, with an expiry date</div></div>
+    <div class="row"><div class="q">Ownership</div><div class="x">Locked inside one product</div><div class="y">Plain files; survives any tool change</div></div>
+    <div class="row"><div class="q">Running cost of "always on"</div><div class="x">A desktop left on, or cloud rent</div><div class="y">A few watts per Pi, hardware I own</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Why the hardware</div>
+  <h2>Why Raspberry Pis, and why so many repos?</h2>
+  <div class="grid two">
+    <div class="card"><div class="ico">🍓</div><h3>The Pis</h3><p class="mute">Eight small computers in a rack, seven of them joined into one cluster (Docker Swarm). They sip power, they are mine, and if one dies the others carry on. They are the "always on" that a laptop cannot be.</p></div>
+    <div class="card"><div class="ico">🌿</div><h3>The repos</h3><p class="mute">Rules, knowledge and session records each live in their own private git repository. That gives full history, a copy on every machine, an off-site backup, and a clean answer to "who changed what, and when".</p></div>
+  </div>
+  <div class="card good" style="margin-top:12px">
+    <h3>What that buys</h3>
+    <p>A general assistant that lives on the cluster, reads the same memory I do, and answers from my phone at 2am or from a train, with no laptop or desktop left running at home.</p>
+  </div>
+</section>
+
+<section id="security">
+  <div class="eyebrow">Part 2 · Approach &amp; security</div>
+  <h2>Always reachable. <span class="grad">Nothing exposed.</span></h2>
+  <p class="lead">The obvious worry: "you put a computer with your memory on the internet?" No. The design goal is that <b>nothing at home listens to the internet at all</b>. Every connection is dialled <em>out</em> from inside.</p>
+  <p class="small mute">This is the end state. Addresses below are placeholders (<code>example.org</code>, <code>192.0.2.x</code>), not the real ones.</p>
+
+  <div class="stack">
+    <div class="layer">
+      <h3>📱 Me, anywhere</h3>
+      <p>Phone or any browser. Two doors, both with a bouncer.</p>
+    </div>
+
+    <div class="conn"><i></i><span>encrypted (TLS) · I must prove who I am first</span></div>
+
+    <div class="split">
+      <div class="layer l-cloud">
+        <h3>Door A · Talk to the assistant</h3>
+        <p>The Claude app reaches a Claude Code session running on a Pi through <b>Remote Control</b>, relayed via my Claude account. The Pi dials out; nothing dials in.</p>
+        <div class="chips"><span class="chip">Claude Remote Control</span><span class="chip">Account sign-in + 2FA</span><span class="chip">Outbound only</span></div>
+      </div>
+      <div class="layer l-cloud">
+        <h3>Door B · Open the memory</h3>
+        <p><code>https://memory.example.org</code> resolves to Cloudflare, never to my house. Cloudflare checks my identity <em>before</em> a single request is forwarded.</p>
+        <div class="chips"><span class="chip">Cloudflare DNS + DNSSEC</span><span class="chip">TLS</span><span class="chip">DDoS / WAF</span><span class="chip">Zero Trust Access</span></div>
+      </div>
+    </div>
+
+    <div class="conn"><i></i><span>the tunnel is opened from <b>inside</b> the house, outwards</span></div>
+
+    <div class="wall">
+      <div class="lbl">🏠 Home network · router has 0 forwarded ports</div>
+      <div class="layer l-pi">
+        <h3>Cloudflare Tunnel connector <span class="tag live">×2 copies</span></h3>
+        <p><code>cloudflared</code> holds an outbound, encrypted link to Cloudflare. Two copies on different Pis, so one can fail. Its credential is stored as a Docker secret, never in a repo.</p>
+        <div class="chips"><span class="chip">cloudflared</span><span class="chip">Docker secrets</span><span class="chip">Remotely managed routes</span></div>
+      </div>
+      <div class="conn"><i></i><span>private overlay network, cluster-only</span></div>
+      <div class="layer l-pi">
+        <h3>Pi cluster · 7 nodes</h3>
+        <p>Services run in containers on a private network that exists only between the Pis, e.g. <code>192.0.2.10</code>–<code>192.0.2.16</code>. Each Pi runs a host firewall. One node holds data; the rest run apps.</p>
+        <div class="chips"><span class="chip">Docker Swarm</span><span class="chip">Overlay network</span><span class="chip">UFW firewall</span><span class="chip">Role-separated nodes</span></div>
+      </div>
+      <div class="conn"><i></i><span>scoped access</span></div>
+      <div class="split">
+        <div class="layer l-pi">
+          <h3>🤖 Resident assistant</h3>
+          <p>Claude Code on a Pi, sandboxed, loading the same harness rules as every other machine.</p>
+          <div class="chips"><span class="chip">OS sandbox (bubblewrap)</span><span class="chip">Permission modes</span><span class="chip">Hooks</span></div>
+        </div>
+        <div class="layer l-pi">
+          <h3>🧠 Memory</h3>
+          <p>Text files in private git repos, served by a small "Memory Hub" service. Full copies also sit on every other device and on GitHub.</p>
+          <div class="chips"><span class="chip">Git</span><span class="chip">Private GitHub remotes</span><span class="chip">Human approval gate</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="conn"><i></i><span>admin only, separate path</span></div>
+    <div class="layer">
+      <h3>🔧 Maintenance door (me only)</h3>
+      <p>Server administration goes over a private WireGuard mesh, with an access-control list, key-only SSH and a re-authentication check. There is no public SSH.</p>
+      <div class="chips"><span class="chip">Tailscale (WireGuard)</span><span class="chip">Tailnet ACL</span><span class="chip">SSH keys, check mode</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Threat by threat</div>
+  <h2>Each way in, and what closes it.</h2>
+  <div class="threat"><div class="t">Scanning or attacking my home IP</div><div class="f"><b>Nothing answers.</b> No port forwards; the tunnel dials out. DNS points at Cloudflare, so the home address is never published.</div></div>
+  <div class="threat"><div class="t">Someone finds the URL</div><div class="f"><b>Cloudflare Access</b> demands an approved identity and a second factor at the edge. Unapproved traffic never reaches a Pi.</div></div>
+  <div class="threat"><div class="t">DNS spoofing or hijack</div><div class="f"><b>DNSSEC</b> signs the records, so forged answers fail validation.</div></div>
+  <div class="threat"><div class="t">Eavesdropping in transit</div><div class="f"><b>TLS</b> to the edge, and an encrypted tunnel from the edge to the cluster.</div></div>
+  <div class="threat"><div class="t">A stolen tunnel credential</div><div class="f">Held as a <b>Docker secret</b>, rotatable, and the routes are managed centrally, so it can be revoked in one place.</div></div>
+  <div class="threat"><div class="t">One compromised service spreading</div><div class="f"><b>Segmented overlay network</b>, per-host firewall, and data kept on a separate node from the apps.</div></div>
+  <div class="threat"><div class="t">The AI itself doing something silly, or being tricked by web content</div><div class="f"><b>OS-level sandbox</b>, permission prompts, hooks that block actions, and a rule that I approve anything published to memory. Web content is treated as untrusted data.</div></div>
+  <div class="threat"><div class="t">Losing the data</div><div class="f"><b>Git.</b> Every device carries a full copy with history, plus private remotes off-site.</div></div>
+  <div class="threat"><div class="t">Account takeover</div><div class="f"><b>Two-factor</b> on the accounts that hold the keys: Claude, Cloudflare, GitHub, the domain registrar.</div></div>
+
+  <div class="note"><b>Engineer's honesty clause.</b> No system has zero attack vectors, and I am not claiming one. What this design does is remove the whole class of "something at home is listening on the internet", and put a named control on every path that remains. The residual trust is in a handful of well-run providers (Anthropic, Cloudflare, GitHub, Tailscale) and in my own account hygiene.</div>
+</section>
+
+<section>
+  <div class="eyebrow">Where it stands</div>
+  <h2>Built, and next.</h2>
+  <div class="grid two">
+    <div class="card">
+      <span class="tag live">Live today</span>
+      <ul class="clean ok">
+        <li>Harness rules, knowledge base, session records and portfolio, in daily use</li>
+        <li>Shared memory across Mac, Linux desktop and a browser agent</li>
+        <li>7-node Pi cluster running</li>
+        <li>Domains on Cloudflare DNS with DNSSEC validating</li>
+        <li>Tunnel proven end to end: a test page served from the Pis over mobile data, with zero ports open</li>
+        <li>Public access is a one-line on/off switch (currently off)</li>
+        <li>Private admin mesh with an access-control list</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag next">Next</span>
+      <ul class="clean ok">
+        <li>Cloudflare Access policy in front of the memory service</li>
+        <li>Memory Hub running on the cluster</li>
+        <li>The resident assistant session living on a Pi</li>
+        <li>Credential rotation and a two-factor sweep on every account</li>
+        <li>Searchable index over the memory (rebuildable, derived from the files)</li>
+        <li>A defined agent team: builders, reviewers, researchers</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">The short version</div>
+  <h2>What it comes down to.</h2>
+  <div class="grid">
+    <div class="card"><h3>⏱️ Time</h3><p class="mute">No re-explaining. Sessions start where the last one stopped, on whatever device is in my hand.</p></div>
+    <div class="card"><h3>🧱 Compounding</h3><p class="mute">Every session leaves the system knowing more. The assistant gets more useful the longer I use it, because the memory is mine and it grows.</p></div>
+    <div class="card"><h3>🔒 Control</h3><p class="mute">My data in plain files on hardware I own, reachable only by me, with no open door on the house.</p></div>
+    <div class="card"><h3>🌙 Availability</h3><p class="mute">A capable assistant with my full context, 24/7, for the running cost of a few small boards.</p></div>
+  </div>
+  <p style="margin-top:20px">Happy to walk you through any layer of it, Lux. The fun part is that it is all ordinary, boring, well-understood technology, just arranged with intent.</p>
+  <p class="mute">Emilio</p>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">Placeholders are used for all hostnames and addresses. Technologies named: Claude Code and Remote Control (Anthropic), Cloudflare DNS, DNSSEC, Tunnel and Zero Trust Access, Docker Swarm, UFW, Tailscale, Git and GitHub.</div>
+</footer>
+
+</body>
+</html>
